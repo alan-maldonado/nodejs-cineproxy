@@ -9,37 +9,6 @@ const app = express();
 
 app.use(cors());
 
-app.get('/', (req, res) => {
-  res.send({
-    hi: 'there',
-    links: [
-      {
-        rel: 'cinemas',
-        href: `${process.env.DOMAIN_SERVER}/cinemas`
-      }
-    ]
-  });
-});
-
-app.get('/cinemas', async (req, res) => {
-  const { data: cities } = await axios.post(process.env.EXTERNAL_API_CINEMAS);
-  const hateoas = _.map(cities, city => ({
-    complejos: city.Complejos,
-    name: city.Nombre,
-    key: city.Clave,
-    geoX: city.GeoX,
-    geoY: city.GeoY,
-    links: [
-      {
-        rel: 'self',
-        href: `${process.env.DOMAIN_SERVER}/cinemas/${city.Clave}`
-      }
-    ]
-  }));
-  const cinemas = _.keyBy(hateoas, 'key');
-  res.json(cinemas);
-});
-
 const formatFormats = formats => {
   const cleanFormats = _.map(formats, format => ({
     name: format.Name,
@@ -105,6 +74,50 @@ const scheduleByCityName = async cityKey => {
 
   return _.keyBy(hateoas, 'key');
 };
+
+const formatLocations = (city, locations) => {
+  return _.map(locations, location => ({
+    key: location.Clave,
+    name: location.Nombre,
+    links: [
+      {
+        rel: 'cinemas',
+        href: `${process.env.DOMAIN_SERVER}/cinemas/${city}/${location.Clave}`
+      }
+    ]
+  }));
+};
+
+app.get('/', (req, res) => {
+  res.send({
+    hi: 'there',
+    links: [
+      {
+        rel: 'cinemas',
+        href: `${process.env.DOMAIN_SERVER}/cinemas`
+      }
+    ]
+  });
+});
+
+app.get('/cinemas', async (req, res) => {
+  const { data: cities } = await axios.post(process.env.EXTERNAL_API_CINEMAS);
+  const hateoas = _.map(cities, city => ({
+    locations: formatLocations(city.Clave, city.Complejos),
+    name: city.Nombre,
+    key: city.Clave,
+    geoX: city.GeoX,
+    geoY: city.GeoY,
+    links: [
+      {
+        rel: 'self',
+        href: `${process.env.DOMAIN_SERVER}/cinemas/${city.Clave}`
+      }
+    ]
+  }));
+  const cinemas = _.keyBy(hateoas, 'key');
+  res.json(cinemas);
+});
 
 app.get('/cinemas/:cityName', async (req, res) => {
   const cinemas = await scheduleByCityName(req.params.cityName);
