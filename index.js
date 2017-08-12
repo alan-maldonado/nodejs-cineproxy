@@ -28,7 +28,7 @@ app.get('/cinemas', async (req, res) => {
     name: city.Nombre,
     key: city.Clave,
     geoX: city.GeoX,
-    geoY: city.geoY,
+    geoY: city.GeoY,
     links: [
       {
         rel: 'self',
