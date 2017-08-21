@@ -20,7 +20,7 @@ const formatFormats = formats => {
   return cleanFormats;
 };
 
-const formatMovies = movies => {
+const formatMovies = (movies, city, cinema) => {
   const cleanMovies = _.map(movies, movie => ({
     title: movie.Title,
     key: movie.Key,
@@ -29,15 +29,21 @@ const formatMovies = movies => {
     runTime: movie.RunTime,
     poster: movie.Poster,
     trailer: movie.Trailer,
-    formats: formatFormats(movie.Formats)
+    formats: formatFormats(movie.Formats),
+    links: [
+      {
+        rel: 'movie',
+        href: `${process.env.DOMAIN_SERVER}/cinemas/${city}/${cinema}/${movie.Key}`
+      }
+    ]
   }));
   return _.keyBy(cleanMovies, 'key');
 };
 
-const formatDates = dates => {
+const formatDates = (dates, city, cinema) => {
   const schedule = _.map(dates, date => ({
     dateTitle: date.ShowtimeDate,
-    movies: formatMovies(date.Movies),
+    movies: formatMovies(date.Movies, city, cinema),
     date: date.FilterDate.replace(/\/Date\((\d+)\)\//gi, '$1')
   }));
   return _.keyBy(schedule, 'date');
@@ -59,7 +65,7 @@ const scheduleByCityName = async cityKey => {
     ? vip
     : {});
   const hateoas = movies.d.Cinemas.map(cinema => ({
-    schedule: formatDates(cinema.Dates),
+    schedule: formatDates(cinema.Dates, cinema.CityKey, cinema.Key),
     name: cinema.Name,
     key: cinema.Key,
     links: [
