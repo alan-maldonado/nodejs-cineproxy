@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const _ = require('lodash');
-const moment = require('moment');
+const moment = require('moment-timezone');
+moment.tz.setDefault("Mexico/General");
 
 require('dotenv').config({});
 
@@ -106,6 +107,10 @@ app.get('/', (req, res) => {
     ]
   });
 });
+
+app.get('/timezones', (req, res) => {
+  res.send(moment.tz.names())
+})
 
 app.get('/cinemas', async(req, res) => {
   const {data: cities} = await axios.post(process.env.EXTERNAL_API_CINEMAS);
