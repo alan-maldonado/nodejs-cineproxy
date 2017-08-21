@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const _ = require('lodash');
+const moment = require('moment');
 
 require('dotenv').config({});
 
@@ -15,7 +16,8 @@ const formatFormats = formats => {
     isExperience: format.IsExperience,
     language: format.Language,
     showTimes: format.Showtimes.map(time =>
-      time.TimeFilter.replace(/\/Date\((\d+)\)\//gi, '$1')
+      moment(parseInt(time.TimeFilter.replace(/\/Date\((\d+)\)\//gi, '$1'),10))
+        .format('hh:mm A')
     )
   }));
   return cleanFormats;
@@ -128,6 +130,15 @@ app.get('/cinemas/:cityName/:cinema', async (req, res) => {
   const cinemas = await scheduleByCityName(req.params.cityName);
   const cinema = _.pick(cinemas, req.params.cinema);
   res.json(cinema[req.params.cinema]);
+});
+
+app.get('/cinemas/:cityName/:cinema/today', async (req, res) => {
+  const cinemas = await scheduleByCityName(req.params.cityName);
+  const cinema = _.pick(cinemas, req.params.cinema);
+  const currentCinema = cinema[req.params.cinema]
+  const [ todayMovies ] = _.map(currentCinema.schedule)
+  currentCinema.movies = todayMovies.movies
+  res.json(_.omit(currentCinema, 'schedule'));
 });
 
 const PORT = process.env.PORT || 3001;
