@@ -15,10 +15,7 @@ const formatFormats = formats => {
     name: format.Name,
     isExperience: format.IsExperience,
     language: format.Language,
-    showTimes: format.Showtimes.map(time =>
-      moment(parseInt(time.TimeFilter.replace(/\/Date\((\d+)\)\//gi, '$1'),10))
-        .format('hh:mm A')
-    )
+    showTimes: format.Showtimes.map(time => moment(parseInt(time.TimeFilter.replace(/\/Date\((\d+)\)\//gi, '$1'), 10)).format('hh:mm A'))
   }));
   return cleanFormats;
 };
@@ -47,16 +44,20 @@ const formatDates = dates => {
 };
 
 const scheduleByCityName = async cityKey => {
-  const { data: normal } = await axios.post(process.env.EXTERNAL_API_MOVIES, {
+  const {data: normal} = await axios.post(process.env.EXTERNAL_API_MOVIES, {
     claveCiudad: cityKey,
     esVIP: false
   });
-  const { data: vip } = await axios.post(process.env.EXTERNAL_API_MOVIES, {
+  const {data: vip} = await axios.post(process.env.EXTERNAL_API_MOVIES, {
     claveCiudad: cityKey,
     esVIP: true
   });
 
-  const movies = _.merge(normal.d ? normal : {}, vip.d ? vip : {});
+  const movies = _.merge(normal.d
+    ? normal
+    : {}, vip.d
+    ? vip
+    : {});
   const hateoas = movies.d.Cinemas.map(cinema => ({
     schedule: formatDates(cinema.Dates),
     name: cinema.Name,
@@ -64,10 +65,8 @@ const scheduleByCityName = async cityKey => {
     links: [
       {
         rel: 'self',
-        href: `${process.env
-          .DOMAIN_SERVER}/cinemas/${cinema.CityKey}/${cinema.Key}`
-      },
-      {
+        href: `${process.env.DOMAIN_SERVER}/cinemas/${cinema.CityKey}/${cinema.Key}`
+      }, {
         rel: 'parent',
         href: `${process.env.DOMAIN_SERVER}/cinemas/${cinema.CityKey}`
       }
@@ -102,8 +101,8 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/cinemas', async (req, res) => {
-  const { data: cities } = await axios.post(process.env.EXTERNAL_API_CINEMAS);
+app.get('/cinemas', async(req, res) => {
+  const {data: cities} = await axios.post(process.env.EXTERNAL_API_CINEMAS);
   const hateoas = _.map(cities, city => ({
     locations: formatLocations(city.Clave, city.Complejos),
     name: city.Nombre,
@@ -121,24 +120,34 @@ app.get('/cinemas', async (req, res) => {
   res.json(cinemas);
 });
 
-app.get('/cinemas/:cityName', async (req, res) => {
+app.get('/cinemas/:cityName', async(req, res) => {
   const cinemas = await scheduleByCityName(req.params.cityName);
   res.json(cinemas);
 });
 
-app.get('/cinemas/:cityName/:cinema', async (req, res) => {
+app.get('/cinemas/:cityName/:cinema/all', async(req, res) => {
   const cinemas = await scheduleByCityName(req.params.cityName);
   const cinema = _.pick(cinemas, req.params.cinema);
   res.json(cinema[req.params.cinema]);
 });
 
-app.get('/cinemas/:cityName/:cinema/today', async (req, res) => {
+app.get('/cinemas/:cityName/:cinema', async(req, res) => {
   const cinemas = await scheduleByCityName(req.params.cityName);
   const cinema = _.pick(cinemas, req.params.cinema);
   const currentCinema = cinema[req.params.cinema]
   const [ todayMovies ] = _.map(currentCinema.schedule)
   currentCinema.movies = todayMovies.movies
   res.json(_.omit(currentCinema, 'schedule'));
+});
+
+app.get('/cinemas/:cityName/:cinema/:movie', async(req, res) => {
+  const cinemas = await scheduleByCityName(req.params.cityName);
+  const cinema = _.pick(cinemas, req.params.cinema);
+  const currentCinema = cinema[req.params.cinema];
+  const [todayMovies] = _.map(currentCinema.schedule);
+  currentCinema.movies = todayMovies.movies;
+  const movie = todayMovies.movies[req.params.movie];
+  res.json(movie);
 });
 
 const PORT = process.env.PORT || 3001;
